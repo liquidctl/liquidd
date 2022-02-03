@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "path": "@source_dir@"
+        }
+    ],
+    "build_systems": [
+        {
+            "name": "ninja",
+            "cmd": ["ninja"],
+            "working_dir": "@build_dir@"
+        }
+    ],
+    "settings": {
+        "LSP": {
+            "clangd": {
+                "enabled": true
+            }
+        }
+    }
+}

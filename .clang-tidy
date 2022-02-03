@@ -1,0 +1,2 @@
+Checks: 'clang-diagnostic-*,clang-analyzer-*,bugprone-*,performance-*,portability-*,readability-*,modernize-*,misc-*,-performance-no-int-to-ptr,-bugprone-sizeof-expression,-bugprone-easily-swappable-parameters'
+FormatStyle: file

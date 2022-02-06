@@ -9,6 +9,7 @@ G_DECLARE_FINAL_TYPE(LiquidHidDevice, liquid_hid_device, LIQUID, HID_DEVICE, GOb
 
 LiquidHidDevice *
 liquid_hid_device_new_for_fd(int fd, guint max_input_report_size);
+
 LiquidHidDevice *
 liquid_hid_device_new_for_path(const char *path, guint max_input_report_size, GError **error);
 

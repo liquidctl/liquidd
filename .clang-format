@@ -1,2 +1,42 @@
+---
 BasedOnStyle: WebKit
-AlwaysBreakAfterDefinitionReturnType: All
+
+BreakBeforeBraces: Allman
+# I would prefer BreakBeforeBraces: Custom and BraceWrapping:
+#    AfterControlStatement: MultiLine
+#    AfterFunction: true
+# but clang-format doesn't seem to work reliably with these rules: it does not
+# move braces back to the same line for single-line control statements,
+# for example
+
+AlignAfterOpenBracket: Align # BlockIndent is nicer, but not available in any stable release of clang-format yet (introduced in v14)
+AlignOperands: true
+
+BinPackArguments: false
+BinPackParameters: false
+
+AlwaysBreakAfterReturnType: TopLevel
+
+PointerAlignment: Right
+
+InsertTrailingCommas: Wrapped
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<(assert|complex|ctype|errno|fenv|float|inttypes|iso646|limits|locale|math|setjmp|signal|std.*|string|tgmath|threads|time|uchar|wchar|wctype)\.h>$' # C standard
+    Priority: 1
+
+  - Regex: '^<(aio|arpa/.*|cpio|dirent|dlfcn|fcntl|fmtmsg|fnmatch|ftw|glob|grp|iconv|langinfo|libgen|monetary|mqueue|ndbm|net/.*|netdb|netinet/.*|nl_types|poll|pthread|pwd|regex|sched|search|semaphore|spawn|strings|stropts|sys/.*|syslog|tar|termios|trace|ulimit|unistd|utime|utmpx|wordexp)\.h>$' # POSIX
+    Priority: 2
+
+  - Regex: '^<(gio/.*|glib|glib-unix|glib-object|gmodule)\.h>$' # GLib
+    Priority: 3
+
+  - Regex: '^<.*>$' # Other system includes
+    Priority: 4
+
+  - Regex: '^".*"$' # Other local includes
+    Priority: 5

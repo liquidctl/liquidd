@@ -1,1 +1,0 @@
-option('sublime_project', type : 'boolean')

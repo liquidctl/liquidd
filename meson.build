@@ -26,13 +26,11 @@ sources = files(
 
 executable('liquidd', sources, dependencies : deps)
 
-if get_option('sublime_project')
-    configure_file(
-        input : 'aux' / 'liquidd.sublime-project.in',
-        output : 'liquidd.sublime-project',
-        configuration : {
-            'source_dir' : meson.project_source_root(),
-            'build_dir' : meson.project_build_root(),
-        }
-    )
-endif
+configure_file(
+    input : 'aux' / 'liquidd.sublime-project.in',
+    output : 'liquidd.sublime-project',
+    configuration : {
+        'source_dir' : meson.project_source_root(),
+        'build_dir' : meson.project_build_root(),
+    }
+)

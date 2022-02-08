@@ -14,11 +14,14 @@ deps = [
     dependency('glib-2.0'),
     dependency('gio-2.0'),
     dependency('gio-unix-2.0'),
+    dependency('gudev-1.0'),
 ]
 
 sources = files(
     'main.c',
     'hid_device.c',
+    'hid_device_info.c',
+    'hid_manager.c',
 )
 
 executable('liquidd', sources, dependencies : deps)

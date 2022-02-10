@@ -5,17 +5,11 @@
 #define FAN_CHANNELS 3
 #define FAN_CHANNELS_MAX 8
 
-enum
-{
-    INPUT_REPORT_ID_FAN_CONFIG = 0x61,
-    INPUT_REPORT_ID_FAN_STATUS = 0x67,
-};
+#define INPUT_REPORT_ID_FAN_CONFIG 0x61
+#define INPUT_REPORT_ID_FAN_STATUS 0x67
 
-enum
-{
-    FAN_STATUS_REPORT_SPEED = 0x02,
-    FAN_STATUS_REPORT_VOLTAGE = 0x04,
-};
+#define FAN_STATUS_REPORT_SPEED 0x02
+#define FAN_STATUS_REPORT_VOLTAGE 0x04
 
 struct unknown_static_data
 {
@@ -181,19 +175,13 @@ liquid_driver_nzxt_smart2_input_report_unknown(LiquidDriverHid *driver G_GNUC_UN
 static void
 liquid_driver_nzxt_smart2_constructed(GObject *object)
 {
-    g_autofree gchar *fan_config_signal
-        = g_strdup_printf("input-report::%#x", INPUT_REPORT_ID_FAN_CONFIG);
-
     g_signal_connect(object,
-                     fan_config_signal,
+                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_CONFIG),
                      G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
                      NULL);
 
-    g_autofree gchar *fan_status_signal
-        = g_strdup_printf("input-report::%#x", INPUT_REPORT_ID_FAN_STATUS);
-
     g_signal_connect(object,
-                     fan_status_signal,
+                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_STATUS),
                      G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_status),
                      NULL);
 

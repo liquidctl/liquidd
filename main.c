@@ -87,7 +87,8 @@ main(int argc, char *argv[])
     }
 
     g_autolist(GObject) drivers = NULL;
-    g_autoptr(LiquidHidManager) hid_manager = liquid_hid_manager_new(g_udev_client_new(NULL));
+    g_autoptr(GUdevClient) udev_client = g_udev_client_new(NULL);
+    g_autoptr(LiquidHidManager) hid_manager = liquid_hid_manager_new(udev_client);
 
     liquid_hid_manager_for_each_device(hid_manager, probe_hid_device, drivers);
 

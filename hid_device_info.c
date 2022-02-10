@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include <linux/input.h>
-#include "glibconfig.h"
 
 struct _LiquidHidDeviceInfo
 {

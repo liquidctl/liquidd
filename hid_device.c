@@ -276,8 +276,8 @@ liquid_hid_device_new_for_path(const char *path, guint max_input_report_size, GE
     return liquid_hid_device_new_for_fd(fd, max_input_report_size);
 }
 
-gssize
+gboolean
 liquid_hid_device_output_report(LiquidHidDevice *device, const void *buffer, gsize count, GError **error)
 {
-    return g_output_stream_write(device->output_stream, buffer, count, NULL, error);
+    return g_output_stream_write(device->output_stream, buffer, count, NULL, error) >= 0;
 }

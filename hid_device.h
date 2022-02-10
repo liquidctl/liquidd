@@ -13,7 +13,7 @@ liquid_hid_device_new_for_fd(int fd, guint max_input_report_size);
 LiquidHidDevice *
 liquid_hid_device_new_for_path(const char *path, guint max_input_report_size, GError **error);
 
-gssize
+gboolean
 liquid_hid_device_output_report(LiquidHidDevice *device, const void *buffer, gsize count, GError **error);
 
 G_END_DECLS

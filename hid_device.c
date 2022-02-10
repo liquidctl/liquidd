@@ -43,8 +43,6 @@ enum
 
 static guint signals[N_SIGNALS];
 
-static GQuark byte_quarks[G_MAXUINT8 + 1];
-
 static void
 liquid_hid_device_read_input_report(LiquidHidDevice *device);
 
@@ -73,10 +71,7 @@ liquid_hid_device_input_report_ready(GObject *source_object, GAsyncResult *resul
 
     if (bytes)
     {
-        const guint8 *data = g_bytes_get_data(bytes, NULL);
-        GQuark detail = g_bytes_get_size(bytes) > 0 ? byte_quarks[*data] : 0;
-        gboolean return_value = FALSE;
-        g_signal_emit(device, signals[SIGNAL_INPUT_REPORT], detail, bytes, &return_value);
+        g_signal_emit(device, signals[SIGNAL_INPUT_REPORT], 0, bytes);
         liquid_hid_device_read_input_report(device);
     }
 }
@@ -209,12 +204,12 @@ liquid_hid_device_class_init(LiquidHidDeviceClass *class)
     signals[SIGNAL_INPUT_REPORT]
         = g_signal_new("input-report", /* signal_name */
                        G_TYPE_FROM_CLASS(class), /* itype */
-                       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED, /* signal_flags */
+                       G_SIGNAL_RUN_LAST, /* signal_flags */
                        0, /* class_offset */
-                       g_signal_accumulator_true_handled, /* accumulator */
+                       NULL, /* accumulator */
                        NULL, /* accu_data */
                        NULL, /* c_marshaller */
-                       G_TYPE_BOOLEAN, /* return_type */
+                       G_TYPE_NONE, /* return_type */
                        1, /* n_params */
                        G_TYPE_BYTES);
 
@@ -229,12 +224,6 @@ liquid_hid_device_class_init(LiquidHidDeviceClass *class)
                        G_TYPE_NONE, /* return_type */
                        1, /* n_params */
                        G_TYPE_ERROR);
-
-    for (guint i = 0; i < G_N_ELEMENTS(byte_quarks); i++)
-    {
-        g_autofree gchar *s = g_strdup_printf("%#x", i);
-        byte_quarks[i] = g_quark_from_string(s);
-    }
 }
 
 static void

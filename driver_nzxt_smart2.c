@@ -1,8 +1,5 @@
 #include "driver_nzxt_smart2.h"
 
-#include "hid_device.h"
-#include "hid_device_info.h"
-
 #define OUTPUT_REPORT_SIZE 64
 
 #define FAN_CHANNELS 3
@@ -90,25 +87,13 @@ static const guint8 set_update_interval_report[OUTPUT_REPORT_SIZE] = {
 struct _LiquidDriverNzxtSmart2
 {
     GObject parent;
-
-    LiquidHidDevice *hid_device;
 };
 
-G_DEFINE_FINAL_TYPE(LiquidDriverNzxtSmart2, liquid_driver_nzxt_smart2, G_TYPE_OBJECT)
-
-enum
-{
-    PROP_0,
-    PROP_HID_DEVICE,
-    N_PROPERTIES
-};
-
-static GParamSpec *pspecs[N_PROPERTIES];
+G_DEFINE_FINAL_TYPE(LiquidDriverNzxtSmart2, liquid_driver_nzxt_smart2, LIQUID_TYPE_DRIVER_HID)
 
 static gboolean
-liquid_driver_nzxt_smart2_input_report_fan_config(LiquidHidDevice *hid_device G_GNUC_UNUSED,
-                                                  GBytes *bytes,
-                                                  LiquidDriverNzxtSmart2 *driver G_GNUC_UNUSED)
+liquid_driver_nzxt_smart2_input_report_fan_config(LiquidDriverHid *driver G_GNUC_UNUSED,
+                                                  GBytes *bytes)
 {
     gsize size = 0;
     const struct fan_config_report *data = g_bytes_get_data(bytes, &size);
@@ -134,9 +119,8 @@ liquid_driver_nzxt_smart2_input_report_fan_config(LiquidHidDevice *hid_device G_
 }
 
 static gboolean
-liquid_driver_nzxt_smart2_input_report_fan_status(LiquidHidDevice *device G_GNUC_UNUSED,
-                                                  GBytes *bytes,
-                                                  LiquidDriverNzxtSmart2 *driver G_GNUC_UNUSED)
+liquid_driver_nzxt_smart2_input_report_fan_status(LiquidDriverHid *driver G_GNUC_UNUSED,
+                                                  GBytes *bytes)
 {
     gsize size = 0;
     const struct fan_status_report *data = g_bytes_get_data(bytes, &size);
@@ -180,9 +164,8 @@ liquid_driver_nzxt_smart2_input_report_fan_status(LiquidHidDevice *device G_GNUC
 }
 
 static gboolean
-liquid_driver_nzxt_smart2_input_report_unknown(LiquidHidDevice *device G_GNUC_UNUSED,
-                                               GBytes *bytes,
-                                               LiquidDriverNzxtSmart2 *driver G_GNUC_UNUSED)
+liquid_driver_nzxt_smart2_input_report_unknown(LiquidDriverHid *driver G_GNUC_UNUSED,
+                                               GBytes *bytes)
 {
     gsize size = 0;
     const guint8 *data = g_bytes_get_data(bytes, &size);
@@ -196,88 +179,23 @@ liquid_driver_nzxt_smart2_input_report_unknown(LiquidHidDevice *device G_GNUC_UN
 }
 
 static void
-liquid_driver_nzxt_smart2_dispose(GObject *object)
-{
-    LiquidDriverNzxtSmart2 *device = LIQUID_DRIVER_NZXT_SMART2(object);
-
-    if (device->hid_device)
-    {
-        g_signal_handlers_disconnect_by_func(device->hid_device,
-                                             liquid_driver_nzxt_smart2_input_report_fan_config,
-                                             device);
-        g_signal_handlers_disconnect_by_func(device->hid_device,
-                                             liquid_driver_nzxt_smart2_input_report_fan_status,
-                                             device);
-        g_signal_handlers_disconnect_by_func(device->hid_device,
-                                             liquid_driver_nzxt_smart2_input_report_unknown,
-                                             device);
-    }
-
-    g_clear_object(&device->hid_device);
-
-    G_OBJECT_CLASS(liquid_driver_nzxt_smart2_parent_class)->dispose(object);
-}
-
-static void
-liquid_driver_nzxt_smart2_get_property(GObject *object,
-                                       guint property_id,
-                                       GValue *value,
-                                       GParamSpec *pspec)
-{
-    LiquidDriverNzxtSmart2 *device = LIQUID_DRIVER_NZXT_SMART2(object);
-
-    switch (property_id)
-    {
-    case PROP_HID_DEVICE:
-        g_value_set_object(value, device->hid_device);
-        break;
-
-    default:
-        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
-static void
-liquid_driver_nzxt_smart2_set_property(GObject *object,
-                                       guint property_id,
-                                       const GValue *value,
-                                       GParamSpec *pspec)
-{
-    LiquidDriverNzxtSmart2 *device = LIQUID_DRIVER_NZXT_SMART2(object);
-
-    switch (property_id)
-    {
-    case PROP_HID_DEVICE:
-        g_set_object(&device->hid_device, g_value_get_object(value));
-        break;
-
-    default:
-        G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
-static void
 liquid_driver_nzxt_smart2_constructed(GObject *object)
 {
-    LiquidDriverNzxtSmart2 *device = LIQUID_DRIVER_NZXT_SMART2(object);
-
     g_autofree gchar *fan_config_signal
         = g_strdup_printf("input-report::%#x", INPUT_REPORT_ID_FAN_CONFIG);
+
+    g_signal_connect(object,
+                     fan_config_signal,
+                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
+                     NULL);
+
     g_autofree gchar *fan_status_signal
         = g_strdup_printf("input-report::%#x", INPUT_REPORT_ID_FAN_STATUS);
 
-    g_signal_connect(device->hid_device,
-                     fan_config_signal,
-                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
-                     device);
-    g_signal_connect(device->hid_device,
+    g_signal_connect(object,
                      fan_status_signal,
                      G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_status),
-                     device);
-    g_signal_connect(device->hid_device,
-                     "input-report",
-                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_unknown),
-                     device);
+                     NULL);
 
     G_OBJECT_CLASS(liquid_driver_nzxt_smart2_parent_class)->constructed(object);
 }
@@ -287,19 +205,11 @@ liquid_driver_nzxt_smart2_class_init(LiquidDriverNzxtSmart2Class *class)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(class);
 
-    gobject_class->dispose = liquid_driver_nzxt_smart2_dispose;
-    gobject_class->get_property = liquid_driver_nzxt_smart2_get_property;
-    gobject_class->set_property = liquid_driver_nzxt_smart2_set_property;
     gobject_class->constructed = liquid_driver_nzxt_smart2_constructed;
 
-    pspecs[PROP_HID_DEVICE]
-        = g_param_spec_object("hid-device", /* name */
-                              "HID device", /* nick */
-                              "HID device", /* blurb */
-                              LIQUID_TYPE_HID_DEVICE, /* object_type */
-                              G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+    LiquidDriverHidClass *driver_hid_class = LIQUID_DRIVER_HID_CLASS(class);
 
-    g_object_class_install_properties(gobject_class, N_PROPERTIES, pspecs);
+    driver_hid_class->input_report = liquid_driver_nzxt_smart2_input_report_unknown;
 }
 
 static void
@@ -350,9 +260,10 @@ liquid_driver_nzxt_smart2_init_device(LiquidDriverNzxtSmart2 *driver, GError **e
 {
     g_return_val_if_fail(LIQUID_IS_DRIVER_NZXT_SMART2(driver), FALSE);
 
+    LiquidHidDevice *hid_device = liquid_driver_hid_get_device(LIQUID_DRIVER_HID(driver));
     g_autoptr(GError) inner_error = NULL;
 
-    if (!liquid_hid_device_output_report(driver->hid_device,
+    if (!liquid_hid_device_output_report(hid_device,
                                          detect_fans_report,
                                          OUTPUT_REPORT_SIZE,
                                          &inner_error))
@@ -361,7 +272,7 @@ liquid_driver_nzxt_smart2_init_device(LiquidDriverNzxtSmart2 *driver, GError **e
         return FALSE;
     }
 
-    if (!liquid_hid_device_output_report(driver->hid_device,
+    if (!liquid_hid_device_output_report(hid_device,
                                          set_update_interval_report,
                                          OUTPUT_REPORT_SIZE,
                                          &inner_error))

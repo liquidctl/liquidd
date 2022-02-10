@@ -22,6 +22,7 @@ sources = files(
     'hid_device.c',
     'hid_device_info.c',
     'hid_manager.c',
+    'driver_hid.c',
     'driver_nzxt_smart2.c',
 )
 

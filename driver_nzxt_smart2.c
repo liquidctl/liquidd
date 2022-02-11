@@ -173,36 +173,25 @@ liquid_driver_nzxt_smart2_input_report_unknown(LiquidDriverHid *driver G_GNUC_UN
 }
 
 static void
-liquid_driver_nzxt_smart2_constructed(GObject *object)
-{
-    g_signal_connect(object,
-                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_CONFIG),
-                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
-                     NULL);
-
-    g_signal_connect(object,
-                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_STATUS),
-                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_status),
-                     NULL);
-
-    G_OBJECT_CLASS(liquid_driver_nzxt_smart2_parent_class)->constructed(object);
-}
-
-static void
 liquid_driver_nzxt_smart2_class_init(LiquidDriverNzxtSmart2Class *class)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS(class);
-
-    gobject_class->constructed = liquid_driver_nzxt_smart2_constructed;
-
     LiquidDriverHidClass *driver_hid_class = LIQUID_DRIVER_HID_CLASS(class);
 
     driver_hid_class->input_report = liquid_driver_nzxt_smart2_input_report_unknown;
 }
 
 static void
-liquid_driver_nzxt_smart2_init(LiquidDriverNzxtSmart2 *device G_GNUC_UNUSED)
+liquid_driver_nzxt_smart2_init(LiquidDriverNzxtSmart2 *device)
 {
+    g_signal_connect(device,
+                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_CONFIG),
+                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
+                     NULL);
+
+    g_signal_connect(device,
+                     "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_STATUS),
+                     G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_status),
+                     NULL);
 }
 
 gboolean

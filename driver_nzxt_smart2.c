@@ -80,7 +80,7 @@ static const guint8 set_update_interval_report[OUTPUT_REPORT_SIZE] = {
 
 struct _LiquidDriverNzxtSmart2
 {
-    GObject parent;
+    LiquidDriverHid parent;
 };
 
 G_DEFINE_FINAL_TYPE(LiquidDriverNzxtSmart2, liquid_driver_nzxt_smart2, LIQUID_TYPE_DRIVER_HID)

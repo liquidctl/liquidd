@@ -15,5 +15,7 @@ Current state
 
 Can't even call it "a prototype" yet. Just a starting point.
 
-Initializes and monitors all NZXT RGB&Fan Controller devices on Linux through
-hidraw, no D-Bus interface yet.
+Monitors all NZXT RGB&Fan Controller devices on Linux through hidraw. Provides
+a D-Bus interface for fan speed monitoring and device reinitialization.
+
+Doesn't handle hotplug yet.

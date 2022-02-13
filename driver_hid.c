@@ -25,7 +25,7 @@ typedef struct
     LiquidHidDevice *hid_device;
 } LiquidDriverHidPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE(LiquidDriverHid, liquid_driver_hid, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE(LiquidDriverHid, liquid_driver_hid, LIQUID_TYPE_DRIVER)
 
 static void
 liquid_driver_hid_emit_input_report(LiquidHidDevice *hid_device G_GNUC_UNUSED,

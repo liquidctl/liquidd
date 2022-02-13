@@ -22,11 +22,25 @@ sources = files(
     'hid_device.c',
     'hid_device_info.c',
     'hid_manager.c',
+    'driver.c',
     'driver_hid.c',
     'driver_nzxt_smart2.c',
 )
 
-executable('liquidd', sources, dependencies : deps)
+gnome = import('gnome')
+
+gdbus_sources = gnome.gdbus_codegen(
+    'dbus_interfaces',
+    sources: files(
+        'org.liquidctl.FanSpeedRPM.xml',
+        'org.liquidctl.InitDevice.xml',
+    ),
+    interface_prefix : 'org.liquidctl.',
+    namespace : 'Liquid_DBus',
+    autocleanup: 'all'
+)
+
+executable('liquidd', sources, gdbus_sources, dependencies : deps)
 
 configure_file(
     input : 'aux' / 'liquidd.sublime-project.in',

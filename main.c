@@ -1,17 +1,16 @@
 #include <signal.h>
 #include <stdlib.h>
 
+#include <gio/gio.h>
 #include <glib-unix.h>
-#include <glib.h>
 
+#include "driver.h"
 #include "driver_nzxt_smart2.h"
 #include "hid_device.h"
 #include "hid_device_info.h"
 #include "hid_manager.h"
 
 #define HID_MAX_BUFFER_SIZE 16384
-
-gboolean init_device = FALSE;
 
 static gboolean
 shutdown_signal(gpointer user_data)
@@ -26,7 +25,7 @@ probe_hid_device(LiquidHidManager *manager G_GNUC_UNUSED,
                  LiquidHidDeviceInfo *info,
                  gpointer user_data)
 {
-    GList *drivers = user_data;
+    GDBusObjectManagerServer *object_manager = user_data;
 
     const char *hidraw_path = liquid_hid_device_info_get_hidraw_path(info);
 
@@ -54,49 +53,54 @@ probe_hid_device(LiquidHidManager *manager G_GNUC_UNUSED,
 
     g_autoptr(LiquidDriverNzxtSmart2) driver = liquid_driver_nzxt_smart2_new(hid_device);
 
-    drivers = g_list_prepend(drivers, g_object_ref(driver));
+    liquid_driver_export(LIQUID_DRIVER(driver), object_manager);
+}
 
-    if (init_device && !liquid_driver_nzxt_smart2_init_device(driver, &error))
-    {
-        g_printerr("Failed to init device %s: %s\n", hidraw_path, error->message);
-        return;
-    }
+static void
+dbus_name_acquired(GDBusConnection *connection G_GNUC_UNUSED, const gchar *name, gpointer user_data G_GNUC_UNUSED)
+{
+    g_printerr("D-Bus name acquired: %s\n", name);
+}
+
+static void
+dbus_name_lost(GDBusConnection *connection G_GNUC_UNUSED, const gchar *name, gpointer user_data G_GNUC_UNUSED)
+{
+    g_printerr("D-Bus name lost: %s\n", name);
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
-    const GOptionEntry entries[] = {
-        {
-            .long_name = "init",
-            .arg = G_OPTION_ARG_NONE,
-            .arg_data = &init_device,
-            .description = "(Re)initialize the device",
-        },
-        G_OPTION_ENTRY_NULL,
-    };
+    g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
 
     g_autoptr(GError) error = NULL;
-    g_autoptr(GOptionContext) context = g_option_context_new(NULL);
-    g_option_context_add_main_entries(context, entries, NULL);
+    g_autoptr(GDBusConnection) connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
-    if (!g_option_context_parse(context, &argc, &argv, &error))
+    if (!connection)
     {
-        g_printerr("%s\n", error->message);
+        g_printerr("Can't connect to D-Bus: %s\n", error->message);
         return EXIT_FAILURE;
     }
 
-    g_autolist(GObject) drivers = NULL;
+    g_autoptr(GDBusObjectManagerServer) object_manager = g_dbus_object_manager_server_new("/org/liquidctl/LiquidD");
     g_autoptr(GUdevClient) udev_client = g_udev_client_new(NULL);
     g_autoptr(LiquidHidManager) hid_manager = liquid_hid_manager_new(udev_client);
 
-    liquid_hid_manager_for_each_device(hid_manager, probe_hid_device, drivers);
+    liquid_hid_manager_for_each_device(hid_manager, probe_hid_device, object_manager);
+    g_dbus_object_manager_server_set_connection(object_manager, connection);
 
-    g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
+    g_bus_own_name_on_connection(connection,
+                                 "org.liquidctl.LiquidD", /* name */
+                                 G_BUS_NAME_OWNER_FLAGS_NONE, /* flags */
+                                 dbus_name_acquired, /* name_acquired_handler */
+                                 dbus_name_lost, /* name_lost_handler */
+                                 NULL, /* user_data */
+                                 NULL /* user_data_free_func */);
 
     g_unix_signal_add(SIGINT, shutdown_signal, loop);
     g_unix_signal_add(SIGTERM, shutdown_signal, loop);
 
     g_main_loop_run(loop);
+
     return EXIT_SUCCESS;
 }

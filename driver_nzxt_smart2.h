@@ -16,7 +16,4 @@ liquid_driver_nzxt_smart2_match(LiquidHidDeviceInfo *info);
 LiquidDriverNzxtSmart2 *
 liquid_driver_nzxt_smart2_new(LiquidHidDevice *device);
 
-gboolean
-liquid_driver_nzxt_smart2_init_device(LiquidDriverNzxtSmart2 *driver, GError **error);
-
 G_END_DECLS

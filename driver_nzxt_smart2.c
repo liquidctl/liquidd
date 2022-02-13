@@ -1,5 +1,10 @@
 #include "driver_nzxt_smart2.h"
 
+#include "dbus_interfaces.h"
+#include "driver.h"
+#include "gio/gdbusinterfaceskeleton.h"
+#include "gio/gdbusobjectskeleton.h"
+
 #define OUTPUT_REPORT_SIZE 64
 
 #define FAN_CHANNELS 3
@@ -81,6 +86,8 @@ static const guint8 set_update_interval_report[OUTPUT_REPORT_SIZE] = {
 struct _LiquidDriverNzxtSmart2
 {
     LiquidDriverHid parent;
+
+    LiquidDBusFanSpeedRPM *rpm[FAN_CHANNELS];
 };
 
 G_DEFINE_FINAL_TYPE(LiquidDriverNzxtSmart2, liquid_driver_nzxt_smart2, LIQUID_TYPE_DRIVER_HID)
@@ -113,7 +120,7 @@ liquid_driver_nzxt_smart2_input_report_fan_config(LiquidDriverHid *driver G_GNUC
 }
 
 static gboolean
-liquid_driver_nzxt_smart2_input_report_fan_status(LiquidDriverHid *driver G_GNUC_UNUSED,
+liquid_driver_nzxt_smart2_input_report_fan_status(LiquidDriverNzxtSmart2 *driver,
                                                   GBytes *bytes)
 {
     gsize size = 0;
@@ -135,6 +142,9 @@ liquid_driver_nzxt_smart2_input_report_fan_status(LiquidDriverHid *driver G_GNUC
                     data->fan_type[i],
                     GUINT16_FROM_LE(data->fan_speed.fan_rpm[i]),
                     data->fan_speed.duty_percent[i]);
+
+            liquid_dbus_fan_speed_rpm_set_fan_speed_rpm(driver->rpm[i],
+                                                        GUINT16_FROM_LE(data->fan_speed.fan_rpm[i]));
         }
         break;
 
@@ -172,26 +182,111 @@ liquid_driver_nzxt_smart2_input_report_unknown(LiquidDriverHid *driver G_GNUC_UN
     return TRUE;
 }
 
+static gboolean
+liquid_driver_nzxt_smart2_init_device(LiquidDriverNzxtSmart2 *driver, GError **error)
+{
+    g_return_val_if_fail(LIQUID_IS_DRIVER_NZXT_SMART2(driver), FALSE);
+
+    LiquidHidDevice *hid_device = liquid_driver_hid_get_device(LIQUID_DRIVER_HID(driver));
+    g_autoptr(GError) inner_error = NULL;
+
+    if (!liquid_hid_device_output_report(hid_device,
+                                         detect_fans_report,
+                                         OUTPUT_REPORT_SIZE,
+                                         &inner_error))
+    {
+        g_propagate_prefixed_error(error, inner_error, "Failed to send detect fans command: ");
+        return FALSE;
+    }
+
+    if (!liquid_hid_device_output_report(hid_device,
+                                         set_update_interval_report,
+                                         OUTPUT_REPORT_SIZE,
+                                         &inner_error))
+    {
+        g_propagate_prefixed_error(error, inner_error, "Failed to send update interval command: ");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static gboolean
+liquid_driver_nzxt_smart2_handle_init_device(LiquidDBusInitDeviceSkeleton *interface G_GNUC_UNUSED,
+                                             GDBusMethodInvocation *invocation,
+                                             LiquidDriverNzxtSmart2 *driver)
+{
+    g_autoptr(GError) error = NULL;
+
+    if (liquid_driver_nzxt_smart2_init_device(driver, &error))
+    {
+        g_dbus_method_invocation_return_value(invocation, NULL);
+    }
+    else
+    {
+        g_dbus_method_invocation_return_gerror(invocation, error);
+    }
+
+    return TRUE;
+}
+
+static void
+liquid_driver_nzxt_smart2_dispose(GObject *object)
+{
+    LiquidDriverNzxtSmart2 *driver = LIQUID_DRIVER_NZXT_SMART2(object);
+
+    for (int i = 0; i < FAN_CHANNELS; i++)
+    {
+        g_clear_object(&driver->rpm[i]);
+    }
+
+    G_OBJECT_CLASS(liquid_driver_nzxt_smart2_parent_class)->dispose(object);
+}
+
 static void
 liquid_driver_nzxt_smart2_class_init(LiquidDriverNzxtSmart2Class *class)
 {
     LiquidDriverHidClass *driver_hid_class = LIQUID_DRIVER_HID_CLASS(class);
 
     driver_hid_class->input_report = liquid_driver_nzxt_smart2_input_report_unknown;
+
+    GObjectClass *gobject_class = G_OBJECT_CLASS(class);
+
+    gobject_class->dispose = liquid_driver_nzxt_smart2_dispose;
 }
 
 static void
-liquid_driver_nzxt_smart2_init(LiquidDriverNzxtSmart2 *device)
+liquid_driver_nzxt_smart2_init(LiquidDriverNzxtSmart2 *driver)
 {
-    g_signal_connect(device,
+    g_signal_connect(driver,
                      "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_CONFIG),
                      G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_config),
                      NULL);
 
-    g_signal_connect(device,
+    g_signal_connect(driver,
                      "input-report::" G_STRINGIFY(INPUT_REPORT_ID_FAN_STATUS),
                      G_CALLBACK(liquid_driver_nzxt_smart2_input_report_fan_status),
                      NULL);
+
+    g_autoptr(LiquidDBusInitDevice) init_interface = liquid_dbus_init_device_skeleton_new();
+
+    g_signal_connect(init_interface,
+                     "handle-init-device",
+                     G_CALLBACK(liquid_driver_nzxt_smart2_handle_init_device),
+                     driver);
+
+    g_dbus_object_skeleton_add_interface(G_DBUS_OBJECT_SKELETON(driver),
+                                         G_DBUS_INTERFACE_SKELETON(init_interface));
+
+    for (int i = 0; i < FAN_CHANNELS; i++)
+    {
+        g_autofree gchar *channel_name = g_strdup_printf("fan%d", i);
+        g_autoptr(GDBusObjectSkeleton) channel_dbus = liquid_driver_add_channel(LIQUID_DRIVER(driver), channel_name);
+        g_autoptr(LiquidDBusFanSpeedRPM) rpm = liquid_dbus_fan_speed_rpm_skeleton_new();
+
+        g_dbus_object_skeleton_add_interface(channel_dbus, G_DBUS_INTERFACE_SKELETON(rpm));
+        driver->rpm[i] = g_steal_pointer(&rpm);
+    }
 }
 
 gboolean
@@ -230,33 +325,4 @@ liquid_driver_nzxt_smart2_new(LiquidHidDevice *hid_device)
                         "hid-device",
                         hid_device,
                         NULL);
-}
-
-gboolean
-liquid_driver_nzxt_smart2_init_device(LiquidDriverNzxtSmart2 *driver, GError **error)
-{
-    g_return_val_if_fail(LIQUID_IS_DRIVER_NZXT_SMART2(driver), FALSE);
-
-    LiquidHidDevice *hid_device = liquid_driver_hid_get_device(LIQUID_DRIVER_HID(driver));
-    g_autoptr(GError) inner_error = NULL;
-
-    if (!liquid_hid_device_output_report(hid_device,
-                                         detect_fans_report,
-                                         OUTPUT_REPORT_SIZE,
-                                         &inner_error))
-    {
-        g_propagate_prefixed_error(error, inner_error, "Failed to send detect fans command: ");
-        return FALSE;
-    }
-
-    if (!liquid_hid_device_output_report(hid_device,
-                                         set_update_interval_report,
-                                         OUTPUT_REPORT_SIZE,
-                                         &inner_error))
-    {
-        g_propagate_prefixed_error(error, inner_error, "Failed to send update interval command: ");
-        return FALSE;
-    }
-
-    return TRUE;
 }

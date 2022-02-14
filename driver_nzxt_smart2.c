@@ -143,8 +143,8 @@ liquid_driver_nzxt_smart2_input_report_fan_status(LiquidDriverNzxtSmart2 *driver
                     GUINT16_FROM_LE(data->fan_speed.fan_rpm[i]),
                     data->fan_speed.duty_percent[i]);
 
-            liquid_dbus_fan_speed_rpm_set_fan_speed_rpm(driver->rpm[i],
-                                                        GUINT16_FROM_LE(data->fan_speed.fan_rpm[i]));
+            liquid_dbus_fan_speed_rpm_set_value(driver->rpm[i],
+                                                GUINT16_FROM_LE(data->fan_speed.fan_rpm[i]));
         }
         break;
 

@@ -51,7 +51,7 @@ probe_hid_device(LiquidHidManager *manager G_GNUC_UNUSED,
         return;
     }
 
-    g_autoptr(LiquidDriverNzxtSmart2) driver = liquid_driver_nzxt_smart2_new(hid_device);
+    g_autoptr(LiquidDriverNzxtSmart2) driver = liquid_driver_nzxt_smart2_new(hid_device, info);
 
     liquid_driver_export(LIQUID_DRIVER(driver), object_manager);
 }

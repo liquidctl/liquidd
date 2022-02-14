@@ -34,6 +34,7 @@ gdbus_sources = gnome.gdbus_codegen(
     sources: files(
         'org.liquidctl.FanSpeedRPM.xml',
         'org.liquidctl.InitDevice.xml',
+        'org.liquidctl.HidDevice.xml',
     ),
     interface_prefix : 'org.liquidctl.',
     namespace : 'Liquid_DBus',

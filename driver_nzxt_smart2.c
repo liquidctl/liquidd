@@ -319,10 +319,12 @@ liquid_driver_nzxt_smart2_match(LiquidHidDeviceInfo *info)
 }
 
 LiquidDriverNzxtSmart2 *
-liquid_driver_nzxt_smart2_new(LiquidHidDevice *hid_device)
+liquid_driver_nzxt_smart2_new(LiquidHidDevice *hid_device, LiquidHidDeviceInfo *info)
 {
     return g_object_new(LIQUID_TYPE_DRIVER_NZXT_SMART2,
                         "hid-device",
                         hid_device,
+                        "hid-device-info",
+                        info,
                         NULL);
 }

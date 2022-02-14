@@ -2,6 +2,7 @@
 
 #include "driver.h"
 #include "hid_device.h"
+#include "hid_device_info.h"
 
 G_BEGIN_DECLS
 
@@ -18,5 +19,8 @@ struct _LiquidDriverHidClass
 
 LiquidHidDevice *
 liquid_driver_hid_get_device(LiquidDriverHid *driver);
+
+LiquidHidDeviceInfo *
+liquid_driver_hid_get_device_info(LiquidDriverHid *driver);
 
 G_END_DECLS

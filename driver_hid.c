@@ -1,11 +1,15 @@
 #include "driver_hid.h"
 
+#include "dbus_interfaces.h"
+#include "hid_device_info.h"
+
 static GQuark byte_quarks[G_MAXUINT8 + 1];
 
 enum
 {
     PROP_0,
     PROP_HID_DEVICE,
+    PROP_HID_DEVICE_INFO,
     N_PROPERTIES
 };
 
@@ -23,6 +27,7 @@ static guint signals[N_SIGNALS];
 typedef struct
 {
     LiquidHidDevice *hid_device;
+    LiquidHidDeviceInfo *hid_device_info;
 } LiquidDriverHidPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(LiquidDriverHid, liquid_driver_hid, LIQUID_TYPE_DRIVER)
@@ -66,6 +71,8 @@ liquid_driver_hid_dispose(GObject *object)
         g_clear_object(&priv->hid_device);
     }
 
+    g_clear_object(&priv->hid_device_info);
+
     G_OBJECT_CLASS(liquid_driver_hid_parent_class)->dispose(object);
 }
 
@@ -82,6 +89,10 @@ liquid_driver_hid_get_property(GObject *object,
     {
     case PROP_HID_DEVICE:
         g_value_set_object(value, priv->hid_device);
+        break;
+
+    case PROP_HID_DEVICE_INFO:
+        g_value_set_object(value, priv->hid_device_info);
         break;
 
     default:
@@ -114,6 +125,23 @@ liquid_driver_hid_set_property(GObject *object,
                          driver);
         break;
 
+    case PROP_HID_DEVICE_INFO:
+        g_set_object(&priv->hid_device_info, g_value_get_object(value));
+
+        {
+            g_autoptr(LiquidDBusHidDevice) dbus_info = liquid_dbus_hid_device_skeleton_new();
+
+            liquid_dbus_hid_device_set_vendor_id(dbus_info,
+                                                 liquid_hid_device_info_get_vendor_id(priv->hid_device_info));
+            liquid_dbus_hid_device_set_product_id(dbus_info,
+                                                  liquid_hid_device_info_get_product_id(priv->hid_device_info));
+
+            g_dbus_object_skeleton_add_interface(G_DBUS_OBJECT_SKELETON(driver),
+                                                 G_DBUS_INTERFACE_SKELETON(dbus_info));
+        }
+
+        break;
+
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -133,6 +161,13 @@ liquid_driver_hid_class_init(LiquidDriverHidClass *class)
                               "HID device", /* nick */
                               "HID device", /* blurb */
                               LIQUID_TYPE_HID_DEVICE, /* object_type */
+                              G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
+    pspecs[PROP_HID_DEVICE_INFO]
+        = g_param_spec_object("hid-device-info", /* name */
+                              "HID device info", /* nick */
+                              "HID device info", /* blurb */
+                              LIQUID_TYPE_HID_DEVICE_INFO, /* object_type */
                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
 
     g_object_class_install_properties(gobject_class, N_PROPERTIES, pspecs);
@@ -181,4 +216,14 @@ liquid_driver_hid_get_device(LiquidDriverHid *driver)
     LiquidDriverHidPrivate *priv = liquid_driver_hid_get_instance_private(driver);
 
     return priv->hid_device;
+}
+
+LiquidHidDeviceInfo *
+liquid_driver_hid_get_device_info(LiquidDriverHid *driver)
+{
+    g_return_val_if_fail(LIQUID_IS_DRIVER_HID(driver), NULL);
+
+    LiquidDriverHidPrivate *priv = liquid_driver_hid_get_instance_private(driver);
+
+    return priv->hid_device_info;
 }

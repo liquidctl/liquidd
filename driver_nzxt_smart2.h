@@ -14,6 +14,6 @@ gboolean
 liquid_driver_nzxt_smart2_match(LiquidHidDeviceInfo *info);
 
 LiquidDriverNzxtSmart2 *
-liquid_driver_nzxt_smart2_new(LiquidHidDevice *device);
+liquid_driver_nzxt_smart2_new(LiquidHidDevice *device, LiquidHidDeviceInfo *info);
 
 G_END_DECLS

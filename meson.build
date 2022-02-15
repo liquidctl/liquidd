@@ -10,15 +10,18 @@ if cc.has_argument('-fno-strict-aliasing')
     add_project_arguments('-fno-strict-aliasing', language : 'c')
 endif
 
-deps = [
+common_deps = [
     dependency('glib-2.0'),
     dependency('gio-2.0'),
     dependency('gio-unix-2.0'),
+]
+
+server_deps = common_deps + [
     dependency('gudev-1.0'),
 ]
 
 sources = files(
-    'main.c',
+    'liquidd.c',
     'hid_device.c',
     'hid_device_info.c',
     'hid_manager.c',
@@ -38,10 +41,12 @@ gdbus_sources = gnome.gdbus_codegen(
     ),
     interface_prefix : 'org.liquidctl.',
     namespace : 'Liquid_DBus',
+    object_manager: true,
     autocleanup: 'all'
 )
 
-executable('liquidd', sources, gdbus_sources, dependencies : deps)
+executable('liquidd', sources, gdbus_sources, dependencies : server_deps)
+executable('liquidctl', 'liquidctl.c', gdbus_sources, dependencies : common_deps)
 
 configure_file(
     input : 'aux' / 'liquidd.sublime-project.in',
